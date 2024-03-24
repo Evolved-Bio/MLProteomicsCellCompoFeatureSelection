@@ -11,7 +11,6 @@ df2 = pd.read_csv(io.BytesIO(uploaded['merged_df_with_categories_testing.csv']))
 
 
 
-
 #Step 2: Random forest for the combined dataset
 import pandas as pd
 import numpy as np
@@ -121,10 +120,8 @@ joblib.dump(le, encoder_filename)
 
 
 
-
 #Step 3: Testing the Random Forest model with testing data
 
-!pip install umap-learn matplotlib
 import pandas as pd
 import numpy as np
 import joblib
@@ -165,7 +162,6 @@ for i, condition in enumerate(df_aggregated.index.to_list()):
     print(f"Test Condition: {condition}")
     for j in range(2):
         print(f"  Candidate {j+1}: {candidates[j]}, Similarity Score: {similarity_scores[j]:.2f}%")
-
 
 
 
@@ -226,9 +222,7 @@ process_and_zip(df2, 'testing')
 
 
 
-
-#Step 5: Random Forest for cellular component categories
-#with hyper parameter tunning
+#Step 5: Random Forest for cellular component categories with hyper parameter tunning
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -323,7 +317,6 @@ files.download(zip_file_name)
 
 
 
-
 #Step 6: Testing the Random Forest models with testing data in each category
 import pandas as pd
 import numpy as np
@@ -332,9 +325,7 @@ import zipfile
 from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-
 categories = ['Cytoplasm', 'Extracellular_Space', 'Membrane', 'Nucleus', 'Others']
-
 
 for category in categories:
     # Load model, encoder, and data specific to each category
