@@ -11,7 +11,6 @@ df = pd.read_csv(io.BytesIO(uploaded['merged_df_with_categories.csv']))
 
 
 
-
 #Step 2: Breaking down the database based on cellular component composition
 
 import pandas as pd
@@ -64,10 +63,8 @@ files.download('Grouped_Proteomics_Repository.zip')
 
 
 
-
 #Step 3: Preanalysis using PCA and LDA
 
-!pip install umap-learn
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -154,7 +151,6 @@ with zipfile.ZipFile(zip_file_name, 'w') as zipf:
 
 # Download the ZIP
 files.download('/content/' + zip_file_name)
-
 
 
 
@@ -283,7 +279,6 @@ files.download('/content/Differential_Expression_Analysis_plots.zip')
 
 
 
-
 #Step 5: Correlation Network Analysis
 
 !pip install networkx matplotlib scipy pandas
@@ -374,7 +369,6 @@ with zipfile.ZipFile('Correlation_Network_plots.zip', 'w') as zipf:
         zipf.write(file_name, arcname=file_name)
 
 files.download('/content/Correlation_Network_plots.zip')
-
 
 
 
