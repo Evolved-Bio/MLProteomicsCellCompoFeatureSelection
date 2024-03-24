@@ -6,19 +6,19 @@ This repository contains Python scripts used as part of an original research pap
 
 **Contents:**
 
-<ins>code 1_id fetching.py:</ins> Preprocesses the individual proteomics datasets, annotating them with information fetched from Uniprot and Ensembl Databases, and integrating them to one dataset for further analysis.
+<ins>Code1_id_fetching.py:</ins> Preprocesses the individual proteomics datasets, annotating them with information fetched from Uniprot and Ensembl Databases, and integrating them to one dataset for further analysis.
 
-<ins>code 2_cell component analysis.py:</ins> Analyzes the combined dataset through dimensionality reduction, Correlation Network Analysis, and more while considering cellular composition categories.
+<ins>Code2_cell_component_analysis.py:</ins> Analyzes the combined dataset through dimensionality reduction, Correlation Network Analysis, and more while considering cellular composition categories.
 
-<ins>code 3_basic ML.py:</ins> Trains a Randfom Forest Machine Learning model using the high dimensional proteomics dataset and compares the effect of feature selection and cellular composition categorization on the performance of the model.
+<ins>Code3_basic_ML.py:</ins> Trains a Randfom Forest Machine Learning model using the high dimensional proteomics dataset and compares the effect of feature selection and cellular composition categorization on the performance of the model.
 
-<ins>code 4_testing the pre-trained ML.py:</ins> Evaluates the perfrmance of the Random Forest model in classifying new proteomics datasets not used in training of the model by selecting the top two most similar conditions from the training datasets and calculating similairty scores.
+<ins>Code4_testing_pretrained_model.py:</ins> Evaluates the perfrmance of the Random Forest model in classifying new proteomics datasets not used in training of the model by selecting the top two most similar conditions from the training datasets and calculating similairty scores.
 
 
-**Installation:**
-The Python scripts are used on Google Colab environment and are supposed to be run consecitively.
+**Dependencies:**
+The Python scripts are run on Google Colab environment and need to be ran consecutively. Installed libraries include mygene, pandas, tqdm, rpy2, networkx, and matplotlib.
 
-**Contributing:**
+**Contributions:**
 Contributions are welcome. Please open an issue or submit a pull request for suggestions or improvements.
 
 **Credits:**
