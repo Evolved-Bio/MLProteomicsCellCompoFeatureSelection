@@ -11,7 +11,6 @@ df = pd.read_csv(io.BytesIO(uploaded['merged_df_with_categories.csv']))
 
 
 
-
 #Step 2: Breaking down the database
 
 import pandas as pd
@@ -62,7 +61,6 @@ print(f'All CSV files are also available in the zip file: {zip_filename}')
 
 from google.colab import files
 files.download('Grouped_Proteomics_Repository.zip')
-
 
 
 
@@ -168,7 +166,6 @@ files.download('/content/Merged_RF_confusion_matrix_HyperTunned.zip')
 
 
 
-
 #Step 4: Feature selection
 
 import pandas as pd
@@ -222,7 +219,6 @@ print("Selected features:\n", selected_features)
 
 # Save DataFrame to CSV
 feature_selected_df.to_csv('feature_selected_df.csv')
-
 
 
 
@@ -324,7 +320,6 @@ with zipfile.ZipFile(zip_file_name, 'w') as zipf:
         zipf.write(file, arcname=file)  # arcname parameter sets the name for the file inside the ZIP
 
 files.download('/content/FS_Merged_RF_confusion_matrix_HyperTunned.zip')
-
 
 
 
