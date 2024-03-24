@@ -2,30 +2,30 @@
 
 **Overview:**
 
-This repository contains Python scripts used as part of an original research paper [insert DOI here] where proteomics datasets from different experiments with focus on skeletal muscle tissues, its 2D and 3D _in vitro_ models, in vivo muscle and its adjacent tissues including tendons, are collected from Proteomics Identification Database (PRIDE) and are combined and used for training machine learning tools. The goal is to use domain knowledge and expertise, cellular compositional data fetched from online databases such as Uniprot and Ensembl in specific, for categoriziation as an alternative to routinely used feature selection methods. This approach was shown to uncover biologically relevant patterns that traditional analysis methods could not reveal, facilitating a more wholistic understanding of the target tissue.
+This repository houses the code and data supporting an original research publication [insert DOI here]. We integrate proteomics datasets from diverse skeletal muscle tissue experiments (including 2D/3D in vitro models, in vivo muscle, and adjacent tissues) retrieved from the Proteomics Identification Database (PRIDE).  Our novel approach leverages domain knowledge and cellular composition data from Uniprot and Ensembl to categorize proteins, guiding feature selection for machine learning analysis. This strategy uncovers biologically meaningful patterns that traditional methods may overlook, offering a deeper understanding of skeletal muscle tissue.
 
 **Contents:**
 
-<ins>Code1_id_fetching.py:</ins> Preprocesses the individual proteomics datasets, annotating them with information fetched from Uniprot and Ensembl Databases, and integrating them to one dataset for further analysis.
+<ins>Code1_id_fetching.py:</ins> Preprocesses proteomics datasets, integrates annotations from Uniprot and Ensembl, and creates a unified dataset.
 
-<ins>Code2_cell_component_analysis.py:</ins> Analyzes the combined dataset through dimensionality reduction, Correlation Network Analysis, and more while considering cellular composition categories.
+<ins>Code2_cell_component_analysis.py:</ins> Employs dimensionality reduction, correlation network analysis, and other techniques to explore the combined dataset, emphasizing cellular composition categories.
 
-<ins>Code3_basic_ML.py:</ins> Trains a Randfom Forest Machine Learning model using the high dimensional proteomics dataset and compares the effect of feature selection and cellular composition categorization on the performance of the model.
+<ins>Code3_basic_ML.py:</ins> Trains a Random Forest model on the proteomics data, examining how feature selection and cellular composition categorization impact performance.
 
-<ins>Code4_testing_pretrained_model.py:</ins> Evaluates the perfrmance of the Random Forest model in classifying new proteomics datasets not used in training of the model by selecting the top two most similar conditions from the training datasets and calculating similairty scores.
+<ins>Code4_testing_pretrained_model.py:</ins> Assesses the model's ability to classify new proteomics datasets by identifying similar conditions from the training set and computing similarity scores.
 
 
 **Dependencies:**
-The Python scripts are run on Google Colab environment and need to be ran consecutively. Installed libraries include mygene, pandas, tqdm, rpy2, networkx, and matplotlib.
+Google Colab environment. Python libraries: mygene, pandas, tqdm, rpy2, networkx, matplotlib
 
 **Contributions:**
-Contributions are welcome. Please open an issue or submit a pull request for suggestions or improvements.
+We welcome contributions to enhance this research. Please open issues for discussions or submit pull requests for code improvements.
 
 **Credits:**
-This project is part of Evolved.Bio's effort in developing biofabrication methods and software stacks required for regeneraitve medicine applications. Evolved.Bio is a Canadian biotechnology startup, driving a radically new approach to regenerative therapeutics by working at the confluence of cell sheet engineering, machine learning, and biomanufacturing to build the world’s first true tissue foundry.
+This project aligns with Evolved.Bio's mission to advance regenerative medicine through cell sheet engineering, machine learning, and biomanufacturing. As a Canadian biotechnology startup, Evolved.Bio pioneers innovative approaches to create a world-leading tissue foundry.
 
 **License:**
-This work is part of an open access publication [insert DOI] under license [insert license details].
+This work is published under [insert license details] as part of an open access publication [insert DOI].
 
 **Contact:**
-For queries or discussions, please contact Alireza Shahin (alireza@itsevolved.com).
+For questions or collaborations, please reach out to Alireza Shahin (alireza@itsevolved.com).
