@@ -464,7 +464,6 @@ files.download('/content/Volcano_Plots.zip')
 
 
 
-
 #Step 7: correlation network for proteins in each condition
 
 import pandas as pd
@@ -551,5 +550,3 @@ with zipfile.ZipFile(zip_file_name, 'w') as zipf:
 
 # Download the ZIP file
 files.download('/content/' + zip_file_name)
-
-
