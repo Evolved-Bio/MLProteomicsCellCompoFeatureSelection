@@ -5,7 +5,7 @@ import io
 import pandas as pd
 import numpy as np
 
-#Load data
+#Load individual proteomics datasets as csv files
 uploaded = files.upload()
 df1 = pd.read_csv(io.BytesIO(uploaded['PR_1.csv']))
 df2 = pd.read_csv(io.BytesIO(uploaded['PR_2.csv']))
@@ -15,7 +15,7 @@ df5 = pd.read_csv(io.BytesIO(uploaded['PR_5.csv']))
 
 
 
-#Step 2: Fetching Ensembl Protein IDs, Ensembl for gene annotations and proteins' IDs
+#Step 2: Fetching Ensembl Protein IDs
 
 import pandas as pd
 import requests
@@ -144,7 +144,7 @@ files.download('PR_5_with_Uniprot.csv')
 
 
 
-#Step 4: Merging files using Uniprot_IDs
+#Step 4: Merging proteomics datasets using Uniprot_IDs
 
 import pandas as pd
 import ast
