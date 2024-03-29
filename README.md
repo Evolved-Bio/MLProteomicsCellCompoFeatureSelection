@@ -2,7 +2,7 @@
 
 **Overview:**
 
-This repository houses the code and data supporting an original research publication [insert DOI here]. We integrate proteomics datasets from diverse skeletal muscle tissue experiments (including 2D/3D in vitro models, in vivo muscle, and adjacent tissues) retrieved from the Proteomics Identification Database (PRIDE).  Our novel approach leverages domain knowledge and cellular composition data from Uniprot and Ensembl to categorize proteins, guiding feature selection for machine learning analysis. This strategy uncovers biologically meaningful patterns that traditional methods may overlook, offering a deeper understanding of skeletal muscle tissue.
+This repository houses the code and data supporting an original research publication [insert DOI here]. Proteomics datasets from diverse skeletal muscle tissue experiments (including 2D/3D in vitro models, in vivo muscle, and adjacent tissues) retrieved from the Proteomics Identification Database (PRIDE) were combined.  This novel approach leveraged domain knowledge and cellular composition data from Uniprot and Ensembl to categorize proteins, guiding feature selection for machine learning analysis. This strategy uncovers biologically meaningful patterns that traditional methods may overlook, offering a deeper understanding of skeletal muscle tissue.
 
 **Contents:**
 
