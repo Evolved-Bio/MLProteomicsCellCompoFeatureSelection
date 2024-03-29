@@ -1,10 +1,11 @@
 #Step 1: Loading files
+
 from google.colab import files
 import io
 import pandas as pd
 import numpy as np
 
-#Load data
+#Load proteomics datasets
 uploaded = files.upload()
 df1 = pd.read_csv(io.BytesIO(uploaded['merged_df_with_categories_training.csv']))
 df2 = pd.read_csv(io.BytesIO(uploaded['merged_df_with_categories_testing.csv']))
@@ -12,6 +13,7 @@ df2 = pd.read_csv(io.BytesIO(uploaded['merged_df_with_categories_testing.csv']))
 
 
 #Step 2: Random forest for the combined dataset
+
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -166,6 +168,7 @@ for i, condition in enumerate(df_aggregated.index.to_list()):
 
 
 #Step 4: Breaking down the database
+
 import pandas as pd
 import zipfile
 import numpy as np
@@ -223,6 +226,7 @@ process_and_zip(df2, 'testing')
 
 
 #Step 5: Random Forest for cellular component categories with hyper parameter tunning
+
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -318,6 +322,7 @@ files.download(zip_file_name)
 
 
 #Step 6: Testing the Random Forest models with testing data in each category
+
 import pandas as pd
 import numpy as np
 import joblib
