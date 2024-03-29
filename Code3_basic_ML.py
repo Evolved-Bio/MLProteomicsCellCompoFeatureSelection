@@ -323,7 +323,7 @@ files.download('/content/FS_Merged_RF_confusion_matrix_HyperTunned.zip')
 
 
 
-#Step 6: Random Forest for cellular componentcategories with hyper parameter tunning
+#Step 6: Random Forest for cellular component categories with hyper parameter tunning
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, KFold, GridSearchCV
