@@ -154,128 +154,93 @@ files.download('/content/' + zip_file_name)
 
 
 
-#Step 4: Differential Expression Analysis
+#Step 4: Differential Expression Analysis for Feature Importance
 
-!pip install rpy2
 import pandas as pd
-import matplotlib.pyplot as plt
-import zipfile
-import glob
-from sklearn.preprocessing import StandardScaler
-from google.colab import files
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
 import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib
+import zipfile
+from google.colab import files
 
-# Set Seaborn context for better font sizes
-sns.set_context("talk")
+# Define a color palette using the new method
+colors = matplotlib.colormaps['tab20']  # This provides 20 distinct colors
 
-# Create a list to store names of generated SVG files
-generated_svg_files = []
+def process_and_plot(file_name, df):
+    # Drop unwanted columns
+    df_conditions = df.drop(['Ensembl_ID', 'Uniprot_ID', 'Category'], axis=1)
 
-def process_category(file_name, df):
-    # Drop non-numeric columns
-    df_numeric = df.drop(['Ensembl_ID', 'Uniprot_ID', 'Category'], axis=1)
+    # Extract base condition names by removing repeat numbers
+    condition_names = df_conditions.columns.str.rsplit('-', n=1).str[0].unique()
 
-    # Standard scaling for numerical columns
-    scaler = StandardScaler()
-    df_scaled = pd.DataFrame(scaler.fit_transform(df_numeric), columns=df_numeric.columns)
+    # Calculate average for each base condition over its repeats
+    df_avg = pd.DataFrame(index=df_conditions.index)
+    for condition in condition_names:
+        condition_columns = [col for col in df_conditions.columns if col.startswith(condition)]
+        df_avg[condition] = df_conditions[condition_columns].mean(axis=1)
 
-    # Extract base conditions from the scaled columns
-    conditions = set()
-    for col_name in df_scaled.columns:
-        condition = col_name.rsplit('-', 1)[0]
-        conditions.add(condition)
+    # Compute the feature importance for each condition using RandomForest
+    importance_data = []
+    for condition in df_avg.columns:
+        X = df_avg.drop(condition, axis=1)
+        y = df_avg[condition]
 
-    # Sort the conditions alphabetically
-    sorted_conditions = sorted(conditions)
+        model = RandomForestRegressor(n_estimators=100)
+        model.fit(X, y)
 
-    # Create a DataFrame to store mean and std for each condition
-    summary_df = pd.DataFrame(columns=['Condition', 'Mean', 'Std'])
+        importance = model.feature_importances_
+        importance_data.append(pd.DataFrame({'Protein': X.columns, 'Importance': importance, 'Condition': condition}))
 
-    # Compute mean and std for each condition
-    for condition in conditions:
-        # Columns for the current condition
-        condition_columns = [col for col in df_scaled.columns if col.startswith(condition)]
+    # Combine importance data into a single DataFrame
+    importance_df = pd.concat(importance_data)
 
-        # Compute mean and standard deviation across the columns
-        mean_expression = df_scaled[condition_columns].mean(axis=0)
-        std_expression = mean_expression.std()
+    # Sort by Condition for alphabetical order
+    importance_df = importance_df.sort_values('Condition')
 
-        # Append to the summary DataFrame
-        summary_df = summary_df.append({
-            'Condition': condition,
-            'Mean': mean_expression.mean(),
-            'Std': std_expression
-        }, ignore_index=True)
+    # Create the boxplot with enhanced visuals
+    plt.figure(figsize=(12, 7))
+    sns.boxplot(data=importance_df, x='Condition', y='Importance', hue='Condition', showfliers=False, linewidth=2.5, palette=[colors(i) for i in range(len(condition_names))], dodge=False)
+    plt.title('Feature Importances by Condition', fontsize=18)
+    plt.xlabel('Condition', fontsize=16)
+    plt.ylabel('Importance', fontsize=16)
+    plt.xticks(fontsize=14, rotation=45)
+    plt.yticks(fontsize=14)
+    plt.legend(title='Condition', title_fontsize='13', fontsize='11', bbox_to_anchor=(1.05, 1), loc='upper left')
 
-    # Plotting the results using Bar Graph
-    plt.figure(figsize=(10, 6))
-    # Sorting rows of summary_df based on sorted_conditions
-    summary_df = summary_df.set_index('Condition').loc[sorted_conditions].reset_index()
-    plt.bar(summary_df['Condition'], summary_df['Mean'], yerr=summary_df['Std'], width=0.6)
-    plt.xlabel('Condition', fontsize=14)
-    plt.ylabel('Mean Expression', fontsize=14)
-    plt.title(f'Mean Expression (Bar Graph) for {file_name}', fontsize=16)
-    plt.xticks(rotation=90, fontsize=12)
-    plt.yticks(fontsize=12)
     plt.tight_layout()
-    plt.savefig(f"{file_name[:-4]}_bar.svg", format='svg')
-    generated_svg_files.append(f"{file_name[:-4]}_bar.svg")
+
+    # Adjust y-axis limit if necessary (you can change these numbers based on your data)
+    plt.ylim(0, 0.35)
+
+    file_name_svg = f'Condition_Importances_{file_name}.svg'
+    plt.savefig(file_name_svg, format='svg', bbox_inches='tight')
     plt.show()
+    return file_name_svg
 
-    # Creating a long-form dataframe and adjust the Condition column
-    long_df = pd.melt(df_scaled, value_vars=df_scaled.columns, var_name='Condition', value_name='Expression')
-    long_df['Condition'] = long_df['Condition'].apply(lambda x: x.rsplit('-', 1)[0])
+# Starting with the file outside of the zip
+df = pd.read_csv('merged_df_with_categories.csv')
+svg_files = [process_and_plot("merged_df_with_categories", df)]
 
-    # Plotting the results using Violin Plot
-    plt.figure(figsize=(10, 6))
-    sns.violinplot(data=long_df, x='Condition', y='Expression', inner='quartile', order=sorted_conditions)
-    plt.ylim(-1, 1)
-    plt.xticks(rotation=90, fontsize=12)
-    plt.yticks(fontsize=12)
-    plt.ylabel('Expression', fontsize=14)
-    plt.title(f'Expression (Violin Plot) for {file_name}', fontsize=16)
-    plt.tight_layout()
-    plt.savefig(f"{file_name[:-4]}_violin.svg", format='svg')
-    generated_svg_files.append(f"{file_name[:-4]}_violin.svg")
-    plt.show()
-
-    # Plotting the results using Box Plot
-    plt.figure(figsize=(10, 6))
-    sns.boxplot(data=long_df, x='Condition', y='Expression', whis=1.0, order=sorted_conditions)
-    plt.ylim(-0.3, 0)
-    plt.xticks(rotation=90, fontsize=12)
-    plt.yticks(fontsize=12)
-    plt.ylabel('Expression', fontsize=14)
-    plt.title(f'Expression (Box Plot) for {file_name}', fontsize=16)
-    plt.tight_layout()
-    plt.savefig(f"{file_name[:-4]}_box.svg", format='svg')
-    generated_svg_files.append(f"{file_name[:-4]}_box.svg")
-    plt.show()
-
-# Load the zip file
+# Now process the files inside the zip
 zip_filename = 'Grouped_Proteomics_Repository.zip'
 archive = zipfile.ZipFile(zip_filename, 'r')
+csv_filenames = archive.namelist()
 
-# List of CSV files including the original CSV file
-csv_files = [
-    'merged_df_with_categories.csv',
-] + archive.namelist()
+for csv_filename in csv_filenames:
+    with archive.open(csv_filename) as file:
+        df = pd.read_csv(file)
+    svg_files.append(process_and_plot(csv_filename[:-4], df))  # remove .csv from filename for title and saved SVG name
 
-# Process each CSV file
-for file_name in csv_files:
-    if file_name in archive.namelist():
-        with archive.open(file_name) as file:
-            df = pd.read_csv(file)
-    else:
-        df = pd.read_csv(file_name)
-    process_category(file_name, df)
+# Zip the SVG files
+zip_file_name = 'Condition_Importances_full.zip'
+with zipfile.ZipFile(zip_file_name, 'w') as zipf:
+    for svg_file in svg_files:
+        zipf.write(svg_file, arcname=svg_file)
 
-# Create a ZIP file with all SVG plots
-with zipfile.ZipFile('Differential_Expression_Analysis_plots.zip', 'w') as zipf:
-    for file_name in generated_svg_files:
-        zipf.write(file_name, arcname=file_name)
-
-files.download('/content/Differential_Expression_Analysis_plots.zip')
+# Download the ZIP
+files.download('/content/' + zip_file_name)
 
 
 
