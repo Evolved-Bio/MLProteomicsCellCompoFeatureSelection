@@ -129,11 +129,11 @@ def process_and_plot(filename, data_frame):
     svg_files.append(file_name)
 
 
-# Starting with the file outside of the zip
+# Starting with combined csv file
 df = pd.read_csv('merged_df_with_categories.csv')
 process_and_plot("merged_df_with_categories", df)
 
-# Process the files inside the zip
+# Process the category csv files inside the zip
 zip_filename = 'Grouped_Proteomics_Repository.zip'
 archive = zipfile.ZipFile(zip_filename, 'r')
 csv_filenames = archive.namelist()
