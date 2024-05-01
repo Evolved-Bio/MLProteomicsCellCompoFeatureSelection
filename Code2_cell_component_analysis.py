@@ -154,7 +154,7 @@ files.download('/content/' + zip_file_name)
 
 
 
-#Step 4: Differential Expression Analysis for Feature Importance
+#Step 4: Feature Importance
 
 import pandas as pd
 import numpy as np
@@ -243,8 +243,110 @@ with zipfile.ZipFile(zip_file_name, 'w') as zipf:
 files.download('/content/' + zip_file_name)
 
 
+#Step 4: Expression Distribution
 
-#Step 5: Correlation Network Analysis
+!pip install rpy2
+%load_ext rpy2.ipython
+
+%%R
+install.packages("BiocManager")
+BiocManager::install("limma")
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import zipfile
+import glob
+from sklearn.preprocessing import StandardScaler
+from google.colab import files
+import seaborn as sns
+
+# Set Seaborn context for better font sizes
+sns.set_context("talk")
+
+# Create a list to store names of generated SVG files
+generated_svg_files = []
+
+def process_category(file_name, df):
+    # Drop non-numeric columns
+    df_numeric = df.drop(['Ensembl_ID', 'Uniprot_ID', 'Category'], axis=1)
+
+    # Standard scaling for numerical columns
+    scaler = StandardScaler()
+    df_scaled = pd.DataFrame(scaler.fit_transform(df_numeric), columns=df_numeric.columns)
+
+    # Extract base conditions from the scaled columns
+    conditions = set()
+    for col_name in df_scaled.columns:
+        condition = col_name.rsplit('-', 1)[0]
+        conditions.add(condition)
+
+    # Sort the conditions alphabetically
+    sorted_conditions = sorted(conditions)
+
+    # Create a DataFrame to store mean and std for each condition
+    summary_df = pd.DataFrame(columns=['Condition', 'Mean', 'Std'])
+
+    # Compute mean and std for each condition
+    for condition in conditions:
+        # Columns for the current condition
+        condition_columns = [col for col in df_scaled.columns if col.startswith(condition)]
+
+        # Compute mean and standard deviation across the columns
+        mean_expression = df_scaled[condition_columns].mean(axis=0)
+        std_expression = mean_expression.std()
+
+        # Append to the summary DataFrame
+        summary_df = pd.concat([summary_df, pd.DataFrame({
+            'Condition': [condition],
+            'Mean': [mean_expression.mean()],
+            'Std': [std_expression]
+        })], ignore_index=True)
+
+    # Creating a long-form dataframe and adjust the Condition column
+    long_df = pd.melt(df_scaled, value_vars=df_scaled.columns, var_name='Condition', value_name='Expression')
+    long_df['Condition'] = long_df['Condition'].apply(lambda x: x.rsplit('-', 1)[0])
+
+    # Plotting the results using Violin Plot
+    plt.figure(figsize=(10, 6))
+    sns.violinplot(data=long_df, x='Condition', y='Expression', inner='quartile', order=sorted_conditions)
+    plt.ylim(-1, 1)
+    plt.xticks(rotation=90, fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.ylabel('Expression', fontsize=14)
+    plt.title(f'Expression (Violin Plot) for {file_name}', fontsize=16)
+    plt.tight_layout()
+    plt.savefig(f"{file_name[:-4]}_violin.svg", format='svg')
+    generated_svg_files.append(f"{file_name[:-4]}_violin.svg")
+    plt.show()
+
+# Load the zip file
+zip_filename = 'Grouped_Proteomics_Repository.zip'
+archive = zipfile.ZipFile(zip_filename, 'r')
+
+# List of CSV files including the original CSV file
+csv_files = [
+    'merged_df_with_categories.csv',
+] + archive.namelist()
+
+# Process each CSV file
+for file_name in csv_files:
+    if file_name in archive.namelist():
+        with archive.open(file_name) as file:
+            df = pd.read_csv(file)
+    else:
+        df = pd.read_csv(file_name)
+    process_category(file_name, df)
+
+# Create a ZIP file with all SVG plots
+with zipfile.ZipFile('Differential_Expression_Analysis_plots.zip', 'w') as zipf:
+    for file_name in generated_svg_files:
+        zipf.write(file_name, arcname=file_name)
+
+files.download('/content/Differential_Expression_Analysis_plots.zip')
+
+
+
+#Step 6: Correlation Network Analysis
 
 !pip install networkx matplotlib scipy pandas
 import matplotlib.pyplot as plt
@@ -337,7 +439,7 @@ files.download('/content/Correlation_Network_plots.zip')
 
 
 
-#Step 6: Volcano plot
+#Step 7: Volcano plot
 
 import pandas as pd
 import numpy as np
@@ -429,7 +531,7 @@ files.download('/content/Volcano_Plots.zip')
 
 
 
-#Step 7: correlation network for proteins in each condition
+#Step 8: correlation network for proteins in each condition
 
 import pandas as pd
 import zipfile
