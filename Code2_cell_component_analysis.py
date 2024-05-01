@@ -159,6 +159,7 @@ files.download('/content/' + zip_file_name)
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import StandardScaler
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib
@@ -166,7 +167,7 @@ import zipfile
 from google.colab import files
 
 # Define a color palette using the new method
-colors = matplotlib.colormaps['tab20']  # This provides 20 distinct colors
+colors = matplotlib.colormaps['tab20']
 
 def process_and_plot(file_name, df):
     # Drop unwanted columns
@@ -180,12 +181,17 @@ def process_and_plot(file_name, df):
     for condition in condition_names:
         condition_columns = [col for col in df_conditions.columns if col.startswith(condition)]
         df_avg[condition] = df_conditions[condition_columns].mean(axis=1)
+    
+    # Standardize the data
+    scaler = StandardScaler()
+    scaled_features = scaler.fit_transform(df_avg)
+    df_scaled = pd.DataFrame(scaled_features, index=df_avg.index, columns=df_avg.columns)
 
     # Compute the feature importance for each condition using RandomForest
     importance_data = []
-    for condition in df_avg.columns:
-        X = df_avg.drop(condition, axis=1)
-        y = df_avg[condition]
+    for condition in df_scaled.columns:
+        X = df_scaled.drop(condition, axis=1)
+        y = df_scaled[condition]
 
         model = RandomForestRegressor(n_estimators=100)
         model.fit(X, y)
@@ -201,17 +207,19 @@ def process_and_plot(file_name, df):
 
     # Create the boxplot with enhanced visuals
     plt.figure(figsize=(12, 7))
-    sns.boxplot(data=importance_df, x='Condition', y='Importance', hue='Condition', showfliers=False, linewidth=2.5, palette=[colors(i) for i in range(len(condition_names))], dodge=False)
-    plt.title('Feature Importances by Condition', fontsize=18)
+    sns.boxplot(data=importance_df, x='Condition', y='Importance', showfliers=False, linewidth=2.5)
+    
+    # Extract category from file_name
+    category_name = file_name.replace('_', ' ').replace('.csv', '').title()  # Assuming the category is part of the filename
+    plt.title(f'Feature Importances by Condition - {category_name}', fontsize=18)
     plt.xlabel('Condition', fontsize=16)
     plt.ylabel('Importance', fontsize=16)
-    plt.xticks(fontsize=14, rotation=45)
+    plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
-    plt.legend(title='Condition', title_fontsize='13', fontsize='11', bbox_to_anchor=(1.05, 1), loc='upper left')
 
     plt.tight_layout()
 
-    # Adjust y-axis limit if necessary (you can change these numbers based on your data)
+    # Adjusting y-axis limit if necessary
     plt.ylim(0, 0.35)
 
     file_name_svg = f'Condition_Importances_{file_name}.svg'
@@ -243,7 +251,7 @@ with zipfile.ZipFile(zip_file_name, 'w') as zipf:
 files.download('/content/' + zip_file_name)
 
 
-#Step 4: Expression Distribution
+#Step 5: Expression Distribution
 
 !pip install rpy2
 %load_ext rpy2.ipython
