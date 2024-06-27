@@ -72,16 +72,14 @@ from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.preprocessing import StandardScaler
 import zipfile
-
 from google.colab import files
 
 markers = ['o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd', 'P', 'X']
 svg_files = []  # List to store SVG filenames
 
 def process_and_plot(filename, data_frame):
-    # Drop the specified columns
+    # Drop unnecessary columns
     data_frame = data_frame.drop(columns=['Uniprot_ID', 'Category'])
-
     df_T = data_frame.set_index('Ensembl_ID').T
 
     # Data standardization
@@ -100,7 +98,7 @@ def process_and_plot(filename, data_frame):
     X_pca = pca.fit_transform(df_T_scaled)
     plt.figure(figsize=(8, 6))
     for i, condition in enumerate(unique_conditions):
-        ix = [i for i, cond in enumerate(conditions) if cond == condition]
+        ix = [j for j, cond in enumerate(conditions) if cond == condition]
         plt.scatter(X_pca[ix, 0], X_pca[ix, 1], marker=markers[i % len(markers)], label=condition, s=72)
     plt.xlabel('First Principal Component', weight='bold')
     plt.ylabel('Second Principal Component', weight='bold')
@@ -120,7 +118,6 @@ def process_and_plot(filename, data_frame):
         plt.scatter(X_lda[ix, 0], X_lda[ix, 1], marker=markers[i % len(markers)], label=condition, s=72)
     plt.xlabel('LDA Dimension 1', weight='bold')
     plt.ylabel('LDA Dimension 2', weight='bold')
-
     plt.title(f'LDA Scatter Plot for {filename}', weight='bold')
     plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
     file_name = f'LDA_{filename}.svg'
@@ -128,12 +125,11 @@ def process_and_plot(filename, data_frame):
     plt.show()
     svg_files.append(file_name)
 
-
-# Starting with combined csv file
+# Starting with the combined CSV file
 df = pd.read_csv('merged_df_with_categories.csv')
 process_and_plot("merged_df_with_categories", df)
 
-# Process the category csv files inside the zip
+# Process the category CSV files inside the ZIP
 zip_filename = 'Grouped_Proteomics_Repository.zip'
 archive = zipfile.ZipFile(zip_filename, 'r')
 csv_filenames = archive.namelist()
@@ -166,7 +162,7 @@ import matplotlib
 import zipfile
 from google.colab import files
 
-# Define a color palette using the new method
+# Define a color palette
 colors = matplotlib.colormaps['tab20']
 
 def process_and_plot(file_name, df):
@@ -205,7 +201,7 @@ def process_and_plot(file_name, df):
     # Sort by Condition for alphabetical order
     importance_df = importance_df.sort_values('Condition')
 
-    # Create the boxplot with enhanced visuals
+    # Create the boxplot
     plt.figure(figsize=(12, 7))
     sns.boxplot(data=importance_df, x='Condition', y='Importance', showfliers=False, linewidth=2.5)
     
@@ -227,11 +223,11 @@ def process_and_plot(file_name, df):
     plt.show()
     return file_name_svg
 
-# Starting with the file outside of the zip
+# Starting with the combined dataset
 df = pd.read_csv('merged_df_with_categories.csv')
 svg_files = [process_and_plot("merged_df_with_categories", df)]
 
-# Now process the files inside the zip
+# Now process the categories
 zip_filename = 'Grouped_Proteomics_Repository.zip'
 archive = zipfile.ZipFile(zip_filename, 'r')
 csv_filenames = archive.namelist()
@@ -251,19 +247,12 @@ with zipfile.ZipFile(zip_file_name, 'w') as zipf:
 files.download('/content/' + zip_file_name)
 
 
+
 #Step 5: Expression Distribution
-
-!pip install rpy2
-%load_ext rpy2.ipython
-
-%%R
-install.packages("BiocManager")
-BiocManager::install("limma")
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import zipfile
-import glob
 from sklearn.preprocessing import StandardScaler
 from google.colab import files
 import seaborn as sns
@@ -354,100 +343,7 @@ files.download('/content/Differential_Expression_Analysis_plots.zip')
 
 
 
-#Step 6: Correlation Network Analysis
-
-!pip install networkx matplotlib scipy pandas
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import networkx as nx
-import pandas as pd
-import zipfile
-import glob
-from google.colab import files
-from sklearn.preprocessing import StandardScaler
-
-def preprocess_and_scale(df):
-    df_numeric = df.drop(['Ensembl_ID', 'Uniprot_ID', 'Category'], axis=1)
-    df_numeric = df_numeric.groupby(df_numeric.columns.str.split('-').str[0], axis=1).mean()
-
-    # Scale the data
-    scaler = StandardScaler()
-    df_scaled = pd.DataFrame(scaler.fit_transform(df_numeric), columns=df_numeric.columns)
-
-    return df_scaled
-
-def create_corr_network(df, file_name, corr_threshold=0.6):
-    df = preprocess_and_scale(df)
-
-    columns = df.columns
-    corr_matrix = df.corr()
-
-    # Create a networkx graph
-    G = nx.Graph()
-
-    # Add nodes to the graph
-    for col in columns:
-        G.add_node(col)
-
-    # Add edges to the graph (only for correlations above the threshold)
-    for i, col1 in enumerate(columns):
-        for j, col2 in enumerate(columns):
-            if j > i and np.abs(corr_matrix.loc[col1, col2]) > corr_threshold:
-                G.add_edge(col1, col2, weight=corr_matrix.loc[col1, col2])
-
-    # Assign colors to conditions
-    color_map = dict(zip(df.columns, mcolors.CSS4_COLORS.keys()))
-    node_colors = [color_map[node] for node in G.nodes]
-
-    # Draw the graph
-    plt.figure(figsize=(10, 10))
-    pos = nx.spring_layout(G)
-    nx.draw_networkx(G, pos, node_color=node_colors, node_size=100, font_size=12, font_weight='bold', edge_color='grey', width=2.0)
-
-    # Draw legend
-    for label, color in color_map.items():
-        plt.plot([], [], 'o', color=color, label=label)
-    plt.legend(fontsize=10)  # Adjusted fontsize for legend
-
-    plt.title(f"Correlation Network for {file_name}", fontsize=18)
-    plt.savefig(f"{file_name[:-4]}.svg", format='svg')
-    plt.show()
-
-# Create a list to store names of generated SVG files
-generated_svg_files = []
-
-# Load the zip file
-zip_filename = 'Grouped_Proteomics_Repository.zip'
-archive = zipfile.ZipFile(zip_filename, 'r')
-
-# Get the CSV filenames in the zip file
-csv_filenames = archive.namelist()
-
-# Process each CSV file in the zip file
-for csv_filename in csv_filenames:
-    with archive.open(csv_filename) as file:
-        df = pd.read_csv(file)
-    print(f"Creating correlation network for {csv_filename}...")
-    create_corr_network(df, csv_filename)
-    generated_svg_files.append(f"{csv_filename[:-4]}.svg")  # append the generated SVG file name to the list
-
-# Process the original merged file with all categories
-original_csv_filename = 'merged_df_with_categories.csv'
-original_df = pd.read_csv(original_csv_filename)
-print(f"Creating correlation network for {original_csv_filename}...")
-create_corr_network(original_df, original_csv_filename)
-generated_svg_files.append(f"{original_csv_filename[:-4]}.svg")  # append the generated SVG file name to the list
-
-# Create a ZIP file with all SVG plots
-with zipfile.ZipFile('Correlation_Network_plots.zip', 'w') as zipf:
-    for file_name in generated_svg_files:
-        zipf.write(file_name, arcname=file_name)
-
-files.download('/content/Correlation_Network_plots.zip')
-
-
-
-#Step 7: Volcano plot
+#Step 6: Volcano plot
 
 import pandas as pd
 import numpy as np
@@ -456,6 +352,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import ttest_ind
 from sklearn.preprocessing import StandardScaler
 import zipfile
+from google.colab import files
 
 def calculate_stats(cat_samples, rest_samples):
     t_stat, p_val = ttest_ind(cat_samples, rest_samples, equal_var=False, nan_policy='omit')
@@ -539,7 +436,100 @@ files.download('/content/Volcano_Plots.zip')
 
 
 
-#Step 8: correlation network for proteins in each condition
+#Step 7: Correlation Network Analysis for Conditions
+
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import networkx as nx
+import pandas as pd
+import zipfile
+from google.colab import files
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+
+def preprocess_and_scale(df):
+    df_numeric = df.drop(['Ensembl_ID', 'Uniprot_ID', 'Category'], axis=1)
+    df_numeric = df_numeric.groupby(df_numeric.columns.str.split('-').str[0], axis=1).mean()
+
+    # Scale the data
+    scaler = StandardScaler()
+    df_scaled = pd.DataFrame(scaler.fit_transform(df_numeric), columns=df_numeric.columns)
+
+    return df_scaled
+
+def create_corr_network(df, file_name, corr_threshold=0.6):
+    df = preprocess_and_scale(df)
+
+    columns = df.columns
+    corr_matrix = df.corr()
+
+    # Create a networkx graph
+    G = nx.Graph()
+
+    # Add nodes to the graph
+    for col in columns:
+        G.add_node(col)
+
+    # Add edges to the graph (only for correlations above the threshold)
+    for i, col1 in enumerate(columns):
+        for j, col2 in enumerate(columns):
+            if j > i and np.abs(corr_matrix.loc[col1, col2]) > corr_threshold:
+                G.add_edge(col1, col2, weight=corr_matrix.loc[col1, col2])
+
+    # Assign colors to conditions
+    color_map = dict(zip(df.columns, mcolors.CSS4_COLORS.keys()))
+    node_colors = [color_map[node] for node in G.nodes]
+
+    # Draw the graph
+    plt.figure(figsize=(10, 10))
+    pos = nx.spring_layout(G)
+    nx.draw_networkx(G, pos, node_color=node_colors, node_size=100, font_size=12, font_weight='bold', edge_color='grey', width=2.0)
+
+    # Draw legend
+    for label, color in color_map.items():
+        plt.plot([], [], 'o', color=color, label=label)
+    plt.legend(fontsize=10)  # Adjusted fontsize for legend
+
+    plt.title(f"Correlation Network for {file_name}", fontsize=18)
+    plt.savefig(f"{file_name[:-4]}.svg", format='svg')
+    plt.show()
+
+# Create a list to store names of generated SVG files
+generated_svg_files = []
+
+# Load the zip file
+zip_filename = 'Grouped_Proteomics_Repository.zip'
+archive = zipfile.ZipFile(zip_filename, 'r')
+
+# Get the CSV filenames in the zip file
+csv_filenames = archive.namelist()
+
+# Process each CSV file in the zip file
+for csv_filename in csv_filenames:
+    with archive.open(csv_filename) as file:
+        df = pd.read_csv(file)
+    print(f"Creating correlation network for {csv_filename}...")
+    create_corr_network(df, csv_filename)
+    generated_svg_files.append(f"{csv_filename[:-4]}.svg")  # append the generated SVG file name to the list
+
+# Process the original merged file with all categories
+original_csv_filename = 'merged_df_with_categories.csv'
+original_df = pd.read_csv(original_csv_filename)
+print(f"Creating correlation network for {original_csv_filename}...")
+create_corr_network(original_df, original_csv_filename)
+generated_svg_files.append(f"{original_csv_filename[:-4]}.svg")  # append the generated SVG file name to the list
+
+# Create a ZIP file with all SVG plots
+with zipfile.ZipFile('Correlation_Network_plots.zip', 'w') as zipf:
+    for file_name in generated_svg_files:
+        zipf.write(file_name, arcname=file_name)
+
+files.download('/content/Correlation_Network_plots.zip')
+
+
+
+
+#Step 8: Correlation Analysis for Proteins
 
 import pandas as pd
 import zipfile
