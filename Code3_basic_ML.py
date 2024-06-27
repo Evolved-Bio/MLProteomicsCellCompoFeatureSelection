@@ -11,6 +11,7 @@ df = pd.read_csv(io.BytesIO(uploaded['merged_df_with_categories.csv']))
 
 
 
+
 #Step 2: Breaking down the database
 
 import pandas as pd
@@ -64,6 +65,7 @@ files.download('Grouped_Proteomics_Repository.zip')
 
 
 
+
 #Step 3: Random forest for the combined dataset with hyper parameter tunning
 
 import pandas as pd
@@ -75,6 +77,7 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 import seaborn as sns
 import matplotlib.pyplot as plt
 import zipfile
+from google.colab import files
 
 # Load the dataframe
 df = pd.read_csv('merged_df_with_categories.csv')
@@ -166,6 +169,7 @@ files.download('/content/Merged_RF_confusion_matrix_HyperTunned.zip')
 
 
 
+
 #Step 4: Feature selection
 
 import pandas as pd
@@ -190,7 +194,7 @@ le = LabelEncoder()
 def extract_condition(column):
     return column.rsplit('-', 1)[0]  # Split based on last dash to remove repeat numbers
 
-# Create labels from column
+# Create labels from columns
 conditions = [extract_condition(col) for col in X.columns]
 y = le.fit_transform(conditions)
 
@@ -219,6 +223,7 @@ print("Selected features:\n", selected_features)
 
 # Save DataFrame to CSV
 feature_selected_df.to_csv('feature_selected_df.csv')
+
 
 
 
@@ -323,7 +328,8 @@ files.download('/content/FS_Merged_RF_confusion_matrix_HyperTunned.zip')
 
 
 
-#Step 6: Random Forest for cellular component categories with hyper parameter tunning
+
+#Step 6: Random Forest for cellular componentcategories with hyper parameter tunning
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, KFold, GridSearchCV
