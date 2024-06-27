@@ -1,19 +1,18 @@
 #Step 1: Loading files
-
 from google.colab import files
 import io
 import pandas as pd
 import numpy as np
 
-#Load proteomics datasets
+#Load data
 uploaded = files.upload()
 df1 = pd.read_csv(io.BytesIO(uploaded['merged_df_with_categories_training.csv']))
 df2 = pd.read_csv(io.BytesIO(uploaded['merged_df_with_categories_testing.csv']))
 
 
 
-#Step 2: Random forest for the combined dataset
 
+#Step 2: Random forest for the combined dataset
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -122,6 +121,7 @@ joblib.dump(le, encoder_filename)
 
 
 
+
 #Step 3: Testing the Random Forest model with testing data
 
 import pandas as pd
@@ -131,7 +131,7 @@ from sklearn.preprocessing import LabelEncoder
 from google.colab import files
 import zipfile
 
-# Load Second CSV and Preprocess
+# Load and preprocess the test dataset
 df_test = pd.read_csv('merged_df_with_categories_testing.csv')
 df_test = df_test.drop(['Ensembl_ID', 'Uniprot_ID', 'Category'], axis=1)
 df_test = df_test.transpose()
@@ -141,7 +141,7 @@ conditions_test = df_test.index.str.split('-').str[0].to_list()
 conditions_series = pd.Series(conditions_test, index=df_test.index)
 df_aggregated = df_test.groupby(conditions_series).mean()
 
-# Load LabelEncoder and model
+# Load LabelEncoder and the pre-trained Random Forest model
 le = joblib.load('my_label_encoder.sav')
 loaded_model = joblib.load('my_trained_rf_model.sav')
 
@@ -167,8 +167,8 @@ for i, condition in enumerate(df_aggregated.index.to_list()):
 
 
 
-#Step 4: Breaking down the database
 
+#Step 4: Breaking down the database
 import pandas as pd
 import zipfile
 import numpy as np
@@ -225,8 +225,9 @@ process_and_zip(df2, 'testing')
 
 
 
-#Step 5: Random Forest for cellular component categories with hyper parameter tunning
 
+#Step 5: Random Forest for cellular component categories
+#with hyper parameter tunning
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -321,8 +322,8 @@ files.download(zip_file_name)
 
 
 
-#Step 6: Testing the Random Forest models with testing data in each category
 
+#Step 6: Testing the Random Forest models with testing data in each category
 import pandas as pd
 import numpy as np
 import joblib
@@ -330,7 +331,9 @@ import zipfile
 from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+
 categories = ['Cytoplasm', 'Extracellular_Space', 'Membrane', 'Nucleus', 'Others']
+
 
 for category in categories:
     # Load model, encoder, and data specific to each category
