@@ -77,7 +77,6 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 import seaborn as sns
 import matplotlib.pyplot as plt
 import zipfile
-from google.colab import files
 
 # Load the dataframe
 df = pd.read_csv('merged_df_with_categories.csv')
@@ -194,7 +193,7 @@ le = LabelEncoder()
 def extract_condition(column):
     return column.rsplit('-', 1)[0]  # Split based on last dash to remove repeat numbers
 
-# Create labels from columns
+# Create labels from column
 conditions = [extract_condition(col) for col in X.columns]
 y = le.fit_transform(conditions)
 
@@ -329,7 +328,217 @@ files.download('/content/FS_Merged_RF_confusion_matrix_HyperTunned.zip')
 
 
 
-#Step 6: Random Forest for cellular componentcategories with hyper parameter tunning
+#Step 6: Feature selection with 25, 50, and 75% retention of proteins for ablation study
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import SelectFromModel
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import LabelEncoder
+import numpy as np
+
+# Load the scaled and merged file
+df = pd.read_csv('merged_df_with_categories.csv', index_col='Ensembl_ID')
+
+# Drop duplicate proteins based on Ensembl_ID and Uniprot_ID
+df = df.drop_duplicates(subset=['Uniprot_ID'], keep='first')
+
+# Drop Uniprot_ID and Category columns for the feature selection process
+X = df.drop(columns=['Uniprot_ID', 'Category'])
+
+# Initialize label encoder
+le = LabelEncoder()
+
+# Function to extract conditions from the columns
+def extract_condition(column):
+    return column.rsplit('-', 1)[0]  # Split based on last dash to remove repeat numbers
+
+# Create labels from columns
+conditions = [extract_condition(col) for col in X.columns]
+y = le.fit_transform(conditions)
+
+# Separate features
+X = X.T.values  # Transpose the dataframe to match conditions with features
+
+# Initialize the selector
+selector = RandomForestClassifier(n_estimators=100, random_state=42)
+
+# Fit the selector to the data
+selector.fit(X, y)
+
+# Get feature importances
+importances = selector.feature_importances_
+
+# Sort features by importance
+indices = np.argsort(importances)[::-1]
+
+# Calculate the number of features to select for 25%, 50%, and 75% retention
+n_features = len(importances)
+n_25 = int(n_features * 0.25)
+n_50 = int(n_features * 0.50)
+n_75 = int(n_features * 0.75)
+
+# Select top features for each retention level
+selected_features_25 = df.index[indices[:n_25]]
+selected_features_50 = df.index[indices[:n_50]]
+selected_features_75 = df.index[indices[:n_75]]
+
+# Create new DataFrames for each retention level
+feature_selected_df_25 = df.loc[selected_features_25]
+feature_selected_df_50 = df.loc[selected_features_50]
+feature_selected_df_75 = df.loc[selected_features_75]
+
+# Save DataFrames to CSV
+feature_selected_df_25.to_csv('feature_selected_df_25.csv')
+feature_selected_df_50.to_csv('feature_selected_df_50.csv')
+feature_selected_df_75.to_csv('feature_selected_df_75.csv')
+
+# Print some information
+print("Number of features selected (25%):", len(selected_features_25))
+print("Number of features selected (50%):", len(selected_features_50))
+print("Number of features selected (75%):", len(selected_features_75))
+
+print("Accuracy of model with 25% selected features: ", cross_val_score(selector, X[:, indices[:n_25]], y, cv=5).mean())
+print("Accuracy of model with 50% selected features: ", cross_val_score(selector, X[:, indices[:n_50]], y, cv=5).mean())
+print("Accuracy of model with 75% selected features: ", cross_val_score(selector, X[:, indices[:n_75]], y, cv=5).mean())
+
+
+
+
+
+#Step 7: Random Forest for ablation study
+!pip install memory_profiler
+
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import KFold, train_test_split, GridSearchCV
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
+import seaborn as sns
+import matplotlib.pyplot as plt
+import zipfile
+from google.colab import files
+import time
+from memory_profiler import memory_usage
+
+# Function to measure the memory usage and execution time
+def profile_function(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        mem_usage_before = memory_usage()[0]
+        result = func(*args, **kwargs)
+        mem_usage_after = memory_usage()[0]
+        end_time = time.time()
+        print(f"Memory usage before: {mem_usage_before} MB")
+        print(f"Memory usage after: {mem_usage_after} MB")
+        print(f"Memory usage increased by: {mem_usage_after - mem_usage_before} MB")
+        print(f"Execution time: {end_time - start_time} seconds")
+        return result
+    return wrapper
+
+# List of feature-selected files
+feature_selected_files = ['feature_selected_df_25.csv', 'feature_selected_df_50.csv', 'feature_selected_df_75.csv']
+
+@profile_function
+def process_file(file):
+    print(f"\nProcessing {file}...")
+    
+    # Load the dataframe
+    df = pd.read_csv(file)
+
+    # Transpose the dataframe and drop unwanted columns
+    df = df.transpose()
+    df = df.drop(['Ensembl_ID', 'Uniprot_ID', 'Category'])
+
+    # Initialize label encoder
+    le = LabelEncoder()
+
+    # Group conditions by removing the dash and numbers after it
+    conditions = df.index.str.split('-').str[0].to_list()
+
+    # Apply label encoding to the conditions
+    y = le.fit_transform(conditions)
+
+    # Extract features
+    X = df.values
+
+    # Scale the data
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
+
+    # Train/test split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+    # Initialize a base Random Forest classifier
+    clf = RandomForestClassifier(random_state=42)
+
+    # K-Fold Cross Validation
+    kf = KFold(n_splits=3, shuffle=True, random_state=42)
+
+    # Define hyperparameters to tune
+    param_grid = {
+        'n_estimators': [50, 100, 200],
+        'max_depth': [None, 10, 20, 30],
+        'min_samples_split': [2, 5, 10],
+        'min_samples_leaf': [1, 2, 4]
+    }
+
+    print("Starting Grid Search for hyperparameter tuning...")
+
+    # Grid Search for hyperparameter tuning with verbose set to 3 for more detailed updates
+    grid_search = GridSearchCV(clf, param_grid, cv=kf, scoring='accuracy', n_jobs=-1, verbose=3)
+    grid_search.fit(X_train, y_train)
+
+    print("Grid Search completed!")
+    print(f"Best hyperparameters found: {grid_search.best_params_}")
+    print(f"Best cross-validation accuracy score: {grid_search.best_score_:.4f}")
+
+    # Evaluate the best model on the test set
+    best_rf = grid_search.best_estimator_
+    y_pred = best_rf.predict(X_test)
+
+    # Print model performance
+    print("\nModel Performance on Test Set:")
+    print("Accuracy:", accuracy_score(y_test, y_pred))
+    print("F1 Score:", f1_score(y_test, y_pred, average='micro'))
+    print("Classification Report:")
+    print(classification_report(y_test, y_pred, zero_division=0))
+
+    # All unique classes in the dataset
+    all_classes = np.unique(y)
+    confusion = confusion_matrix(y_test, y_pred, labels=all_classes)
+
+    # Plotting the confusion matrix
+    all_class_names = le.inverse_transform(np.unique(y))
+    plt.figure(figsize=(10,7))
+    sns.heatmap(confusion, annot=True, fmt="d", cmap='Blues', xticklabels=all_class_names, yticklabels=all_class_names)
+    plt.xlabel('Predicted Labels')
+    plt.ylabel('True Labels')
+    plt.title(f'Random Forest Confusion Matrix Heatmap with Hyper Tuning for {file}')
+
+    # Save the heatmap as an SVG file
+    file_name = f'FS_{file}_RF_confusion_matrix_HyperTunned.svg'
+    plt.savefig(file_name, format='svg')
+    plt.show()  # This will display the heatmap
+
+    # Create a ZIP file with the generated SVG plot
+    svg_files = [file_name]
+    zip_file_name = f'FS_{file}_RF_confusion_matrix_HyperTunned.zip'
+
+    with zipfile.ZipFile(zip_file_name, 'w') as zipf:
+        for svg_file in svg_files:
+            zipf.write(svg_file, arcname=svg_file)
+
+    files.download(f'/content/{zip_file_name}')
+
+# Process each feature-selected file and profile memory and time
+for file in feature_selected_files:
+    process_file(file)
+
+
+
+
+#Step 8: Random Forest for cellular component categories with hyper parameter tunning
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, KFold, GridSearchCV
