@@ -627,3 +627,401 @@ with zipfile.ZipFile(zip_file_name, 'w') as zipf:
         zipf.write(svg_file, arcname=svg_file)
 
 files.download('/content/Component_plots_HyperTunned.zip')
+
+
+
+#Step 9: Feature selection using PCA
+
+!pip install kneed
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from google.colab import files
+import matplotlib.pyplot as plt
+
+# Load the scaled and merged file
+df = pd.read_csv('merged_df_with_categories.csv', index_col='Ensembl_ID')
+
+# Drop duplicate proteins based on Ensembl_ID and Uniprot_ID
+df = df.drop_duplicates(subset=['Uniprot_ID'], keep='first')
+
+# Drop Uniprot_ID and Category columns for the feature selection process
+X = df.drop(columns=['Uniprot_ID', 'Category'])
+
+# Separate features
+X = X.T.values  # Transpose the dataframe to match conditions with features
+
+# Standardize the features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Apply PCA
+pca = PCA()
+pca.fit(X_scaled)
+
+# Calculate explained variance ratio
+explained_variance_ratio = pca.explained_variance_ratio_
+
+# Function to find the cutoff point
+def find_cutoff(explained_variance_ratio, threshold=0.001):
+    differences = np.diff(explained_variance_ratio)
+    cutoff = np.where(differences < threshold)[0][0] + 1
+    return min(cutoff, len(explained_variance_ratio) // 2)  # Cap at 50% of components
+
+# Find the optimal number of components
+n_components_optimal = find_cutoff(explained_variance_ratio)
+
+# Get the feature importances based on the absolute sum of loadings for the optimal components
+feature_importance = np.sum(np.abs(pca.components_[:n_components_optimal]), axis=0)
+feature_importance = feature_importance / np.sum(feature_importance)
+
+# Select features based on importance
+importance_threshold = np.mean(feature_importance)  # Use mean importance as threshold
+selected_features_mask = feature_importance > importance_threshold
+selected_features = df.index[selected_features_mask]
+
+# Create a new DataFrame with only the selected features
+feature_selected_df = df.loc[selected_features]
+
+# Print some information
+print(f"Total number of features: {X.shape[1]}")
+print(f"Number of components selected: {n_components_optimal}")
+print("Number of features selected:", len(selected_features))
+print("Selected features:\n", selected_features)
+
+# Plot the explained variance ratio
+plt.figure(figsize=(12, 6))
+plt.plot(range(1, len(explained_variance_ratio)+1), explained_variance_ratio, 'b-')
+plt.plot(range(1, len(explained_variance_ratio)+1), np.cumsum(explained_variance_ratio), 'r-')
+plt.xlabel('Number of Components')
+plt.ylabel('Explained Variance Ratio')
+plt.title('Explained Variance Ratio and Cumulative Explained Variance vs Number of Components')
+plt.axvline(x=n_components_optimal, color='g', linestyle='--', label=f'Selected components: {n_components_optimal}')
+plt.legend(['Individual', 'Cumulative', 'Cutoff'])
+plt.grid(True)
+plt.tight_layout()
+
+# Save the plot as SVG
+svg_filename = 'pca_explained_variance_plot.svg'
+plt.savefig(svg_filename, format='svg')
+print(f"Explained variance plot saved as '{svg_filename}'")
+
+# Save DataFrame to CSV
+csv_filename = 'pca_feature_selected_df.csv'
+feature_selected_df.to_csv(csv_filename)
+
+print(f"CSV file '{csv_filename}' has been created with the selected features.")
+
+# Download the new CSV file and the SVG plot
+files.download(csv_filename)
+files.download(svg_filename)
+
+
+
+
+#Step 10: Random Forest for PCA-Selected Features
+
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import KFold, train_test_split, GridSearchCV
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
+import seaborn as sns
+import matplotlib.pyplot as plt
+import zipfile
+from google.colab import files
+
+# Load the dataframe
+df = pd.read_csv('pca_feature_selected_df.csv')
+
+# Transpose the dataframe and drop unwanted columns
+df = df.transpose()
+df = df.drop(['Ensembl_ID', 'Uniprot_ID', 'Category'])
+
+# Initialize label encoder
+le = LabelEncoder()
+
+# Group conditions by removing the dash and numbers after it
+conditions = df.index.str.split('-').str[0].to_list()
+
+# Apply label encoding to the conditions
+y = le.fit_transform(conditions)
+
+# Extract features
+X = df.values
+
+# Scale the data
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+
+# Train/test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Initialize a base Random Forest classifier
+clf = RandomForestClassifier(random_state=42)
+
+# K-Fold Cross Validation
+kf = KFold(n_splits=3, shuffle=True, random_state=42)
+
+# Define hyperparameters to tune
+param_grid = {
+    'n_estimators': [50, 100, 200],
+    'max_depth': [None, 10, 20, 30],
+    'min_samples_split': [2, 5, 10],
+    'min_samples_leaf': [1, 2, 4]
+}
+
+print("Starting Grid Search for hyperparameter tuning...")
+
+# Grid Search for hyperparameter tuning with verbose set to 3 for more detailed updates
+grid_search = GridSearchCV(clf, param_grid, cv=kf, scoring='accuracy', n_jobs=-1, verbose=3)
+grid_search.fit(X_train, y_train)
+
+print("Grid Search completed!")
+print(f"Best hyperparameters found: {grid_search.best_params_}")
+print(f"Best cross-validation accuracy score: {grid_search.best_score_:.4f}")
+
+# Evaluate the best model on the test set
+best_rf = grid_search.best_estimator_
+y_pred = best_rf.predict(X_test)
+
+# Print model performance
+print("\nModel Performance on Test Set:")
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("F1 Score:", f1_score(y_test, y_pred, average='micro'))
+print("Classification Report:")
+print(classification_report(y_test, y_pred, zero_division=0))
+
+# All unique classes in the dataset
+all_classes = np.unique(y)
+confusion = confusion_matrix(y_test, y_pred, labels=all_classes)
+
+# Plotting the confusion matrix
+all_class_names = le.inverse_transform(np.unique(y))
+plt.figure(figsize=(10,7))
+sns.heatmap(confusion, annot=True, fmt="d", cmap='Blues', xticklabels=all_class_names, yticklabels=all_class_names)
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+plt.title('Random Forest Confusion Matrix Heatmap with Hyper Tuning for PCA-FS')
+
+# Save the plot as SVG file
+svg_file_name = 'PCA_FS_Merged_RF_confusion_matrix_HyperTunned.svg'
+plt.savefig(svg_file_name, format='svg')
+
+# Create a ZIP file with the generated SVG plot
+zip_file_name = 'PCA_FS_Merged_RF_confusion_matrix_HyperTunned.zip'
+
+with zipfile.ZipFile(zip_file_name, 'w') as zipf:
+    zipf.write(svg_file_name, arcname=svg_file_name)  # arcname parameter sets the name for the file inside the ZIP
+
+files.download(zip_file_name)
+
+
+
+
+#Step 11: Feature selection using LDA
+
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.preprocessing import LabelEncoder
+from google.colab import files
+import matplotlib.pyplot as plt
+
+# Load the scaled and merged file
+df = pd.read_csv('merged_df_with_categories.csv', index_col='Ensembl_ID')
+
+# Drop duplicate proteins based on Ensembl_ID and Uniprot_ID
+df = df.drop_duplicates(subset=['Uniprot_ID'], keep='first')
+
+# Drop Uniprot_ID and Category columns for the feature selection process
+X = df.drop(columns=['Uniprot_ID', 'Category'])
+
+# Initialize label encoder
+le = LabelEncoder()
+
+# Function to extract conditions from the columns
+def extract_condition(column):
+    return column.rsplit('-', 1)[0]  # Split based on last dash to remove repeat numbers
+
+# Create labels from column
+conditions = [extract_condition(col) for col in X.columns]
+y = le.fit_transform(conditions)
+
+# Separate features
+X = X.T.values  # Transpose the dataframe to match conditions with features
+
+# Standardize the features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Apply LDA with SVD solver
+n_components = min(len(np.unique(y)) - 1, X_scaled.shape[1])
+lda = LinearDiscriminantAnalysis(n_components=n_components, solver='svd')
+X_lda = lda.fit_transform(X_scaled, y)
+
+# Get the feature importances based on LDA coefficients
+feature_importance = np.sum(np.abs(lda.coef_), axis=0)
+feature_importance = feature_importance / np.sum(feature_importance)
+
+# Sort features by importance
+sorted_idx = np.argsort(feature_importance)[::-1]
+sorted_importance = feature_importance[sorted_idx]
+
+# Calculate cumulative explained variance ratio
+cumulative_importance = np.cumsum(sorted_importance)
+
+# Find the optimal number of features
+# We'll use a threshold of 95% explained variance, but you can adjust this
+threshold = 0.95
+n_features_optimal = np.where(cumulative_importance >= threshold)[0][0] + 1
+
+print(f"Optimal number of features: {n_features_optimal}")
+
+# Select the optimal number of features
+selected_features_mask = sorted_idx[:n_features_optimal]
+
+# Get the selected features
+selected_features = df.index[selected_features_mask]
+
+# Create a new DataFrame with only the selected features
+feature_selected_df = df.loc[selected_features]
+
+# Print some information
+print("Number of features selected:", len(selected_features))
+print("Cumulative explained variance ratio:", cumulative_importance[n_features_optimal-1])
+print("Selected features:\n", selected_features)
+
+# Plot the cumulative explained variance ratio
+plt.figure(figsize=(10, 6))
+plt.plot(range(1, len(cumulative_importance)+1), cumulative_importance)
+plt.xlabel('Number of Features')
+plt.ylabel('Cumulative Explained Variance Ratio')
+plt.title('Cumulative Explained Variance Ratio vs Number of Features')
+plt.axvline(x=n_features_optimal, color='r', linestyle='--', label=f'Optimal number of features: {n_features_optimal}')
+plt.axhline(y=threshold, color='g', linestyle='--', label=f'Threshold: {threshold}')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+
+# Save the plot as SVG
+svg_filename = 'LDA_cumulative_variance_plot.svg'
+plt.savefig(svg_filename, format='svg')
+print(f"Cumulative variance plot saved as '{svg_filename}'")
+
+# Save DataFrame to CSV
+csv_filename = 'lda_feature_selected_df.csv'
+feature_selected_df.to_csv(csv_filename)
+
+print(f"CSV file '{csv_filename}' has been created with the selected features.")
+
+# Download the new CSV file and the SVG plot
+files.download(csv_filename)
+files.download(svg_filename)
+
+
+
+
+#Step 12: Random Forest for RDA-Selected Features
+
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import KFold, train_test_split, GridSearchCV
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
+import seaborn as sns
+import matplotlib.pyplot as plt
+import zipfile
+from google.colab import files
+
+# Load the dataframe
+df = pd.read_csv('lda_feature_selected_df.csv')
+
+# Transpose the dataframe and drop unwanted columns
+df = df.transpose()
+df = df.drop(['Ensembl_ID', 'Uniprot_ID', 'Category'])
+
+# Initialize label encoder
+le = LabelEncoder()
+
+# Group conditions by removing the dash and numbers after it
+conditions = df.index.str.split('-').str[0].to_list()
+
+# Apply label encoding to the conditions
+y = le.fit_transform(conditions)
+
+# Extract features
+X = df.values
+
+# Scale the data
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+
+# Train/test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Initialize a base Random Forest classifier
+clf = RandomForestClassifier(random_state=42)
+
+# K-Fold Cross Validation
+kf = KFold(n_splits=3, shuffle=True, random_state=42)
+
+# Define hyperparameters to tune
+param_grid = {
+    'n_estimators': [50, 100, 200],
+    'max_depth': [None, 10, 20, 30],
+    'min_samples_split': [2, 5, 10],
+    'min_samples_leaf': [1, 2, 4]
+}
+
+print("Starting Grid Search for hyperparameter tuning...")
+
+# Grid Search for hyperparameter tuning with verbose set to 3 for more detailed updates
+grid_search = GridSearchCV(clf, param_grid, cv=kf, scoring='accuracy', n_jobs=-1, verbose=3)
+grid_search.fit(X_train, y_train)
+
+print("Grid Search completed!")
+print(f"Best hyperparameters found: {grid_search.best_params_}")
+print(f"Best cross-validation accuracy score: {grid_search.best_score_:.4f}")
+
+# Evaluate the best model on the test set
+best_rf = grid_search.best_estimator_
+y_pred = best_rf.predict(X_test)
+
+# Print model performance
+print("\nModel Performance on Test Set:")
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("F1 Score:", f1_score(y_test, y_pred, average='micro'))
+print("Classification Report:")
+print(classification_report(y_test, y_pred, zero_division=0))
+
+# All unique classes in the dataset
+all_classes = np.unique(y)
+confusion = confusion_matrix(y_test, y_pred, labels=all_classes)
+
+# Plotting the confusion matrix
+all_class_names = le.inverse_transform(np.unique(y))
+plt.figure(figsize=(10,7))
+sns.heatmap(confusion, annot=True, fmt="d", cmap='Blues', xticklabels=all_class_names, yticklabels=all_class_names)
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+plt.title('Random Forest Confusion Matrix Heatmap with Hyper Tuning for LDA-FS')
+
+# Save the heatmap as an SVG file
+file_name = 'LDA_FS_Merged_RF_confusion_matrix_HyperTunned.svg'
+plt.savefig(file_name, format='svg')
+plt.show()  # This will display the heatmap
+
+# Create a ZIP file with the generated SVG plot
+svg_files = [file_name]
+zip_file_name = 'LDA_FS_Merged_RF_confusion_matrix_HyperTunned.zip'
+
+with zipfile.ZipFile(zip_file_name, 'w') as zipf:
+    for file in svg_files:
+        zipf.write(file, arcname=file)  # arcname parameter sets the name for the file inside the ZIP
+
+files.download('/content/LDA_FS_Merged_RF_confusion_matrix_HyperTunned.zip')
