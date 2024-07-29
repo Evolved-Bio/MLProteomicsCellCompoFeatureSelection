@@ -169,7 +169,7 @@ files.download('/content/Merged_RF_confusion_matrix_HyperTunned.zip')
 
 
 
-#Step 4: Feature selection
+#Step 4: RandomForest Feature selection
 
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
@@ -226,7 +226,7 @@ feature_selected_df.to_csv('feature_selected_df.csv')
 
 
 
-#Step 5: Random Forest for Feature selected version with hyper parameter tunning
+#Step 5: Random Forest ML model for Feature selected version with hyper parameter tunning
 
 import pandas as pd
 import numpy as np
@@ -405,7 +405,8 @@ print("Accuracy of model with 75% selected features: ", cross_val_score(selector
 
 
 
-#Step 7: Random Forest for ablation study
+#Step 7: Random Forest ML model for ablation study
+
 !pip install memory_profiler
 
 import pandas as pd
@@ -538,7 +539,7 @@ for file in feature_selected_files:
 
 
 
-#Step 8: Random Forest for cellular component categories with hyper parameter tunning
+#Step 8: Random Forest ML model for cellular component categories with hyper parameter tunning
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, KFold, GridSearchCV
@@ -633,6 +634,7 @@ files.download('/content/Component_plots_HyperTunned.zip')
 #Step 9: Feature selection using PCA
 
 !pip install kneed
+
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -720,7 +722,7 @@ files.download(svg_filename)
 
 
 
-#Step 10: Random Forest for PCA-Selected Features
+#Step 10: Random Forest ML model for PCA-Selected Features
 
 import pandas as pd
 import numpy as np
@@ -925,7 +927,7 @@ files.download(svg_filename)
 
 
 
-#Step 12: Random Forest for RDA-Selected Features
+#Step 12: Random Forest ML model for RDA-Selected Features
 
 import pandas as pd
 import numpy as np
