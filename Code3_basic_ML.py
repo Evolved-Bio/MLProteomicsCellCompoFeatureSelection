@@ -876,8 +876,7 @@ sorted_importance = feature_importance[sorted_idx]
 # Calculate cumulative explained variance ratio
 cumulative_importance = np.cumsum(sorted_importance)
 
-# Find the optimal number of features
-# We'll use a threshold of 95% explained variance, but you can adjust this
+# Find the optimal number of features (95% explained variance)
 threshold = 0.95
 n_features_optimal = np.where(cumulative_importance >= threshold)[0][0] + 1
 
